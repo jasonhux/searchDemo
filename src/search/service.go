@@ -24,20 +24,39 @@ func NewService() Service {
 	return &service{}
 }
 
-func (s *service) PrepareData() {
-
+func PrepareData(tickets []*Ticket, users []*User, organizations []*Organization) map[string]map[string]Field {
+	//Convert tickets, users and organizations slice to []interface{} so they can share the same ProcessFieldList func which takes []interface{} as param
+	tList := make([]interface{}, len(tickets))
+	for i, v := range tickets {
+		tList[i] = v
+	}
+	uList := make([]interface{}, len(users))
+	for i, v := range users {
+		uList[i] = v
+	}
+	oList := make([]interface{}, len(organizations))
+	for i, v := range organizations {
+		oList[i] = v
+	}
+	return map[string]map[string]Field{
+		"1": ProcessFieldList(tList),
+		"2": ProcessFieldList(uList),
+		"3": ProcessFieldList(oList),
+	}
 }
 
-func PrepareTickets(tickets []*Ticket) map[string]Field {
-	//timenow
-	fmt.Println(len(tickets))
-	//start := time.Now()
-	fieldList := SetupStructure(&Ticket{})
-	for _, ticket := range tickets {
+//ProcessFieldList func is to convert object list such as tickets to a map structure; map key is the struct field name (ex. Name). The map value is the Field struct;
+//Field struct contains the 1. map key's type (ex. string, int) and 2. a nested value map;
+//The nested value map has the struct field value in string format as the key (ex. "A Drama in Gabon", or "true"); the map value are a list of pointers to the structs which contains the map key;
+//When a field contains an array, treat each string in the array as a separate value map key;
+func ProcessFieldList(structList []interface{}) map[string]Field {
+	fmt.Println(len(structList))
+
+	fieldList := initFieldList(structList[0])
+	for _, ticket := range structList {
 		v := reflect.ValueOf(ticket).Elem()
 		for k := range fieldList {
 			updatedTicketList := []interface{}{}
-			//make sure array change and bool type change is required
 			switch fieldList[k].Type {
 			case "[]string":
 				list, ok := v.FieldByName(k).Interface().([]string)
@@ -57,12 +76,10 @@ func PrepareTickets(tickets []*Ticket) map[string]Field {
 			}
 		}
 	}
-	// colapse := time.Now().Sub(start)
-	// fmt.Println(colapse)
 	return fieldList
 }
 
-func SetupStructure(instance interface{}) map[string]Field {
+func initFieldList(instance interface{}) map[string]Field {
 	v := reflect.ValueOf(instance).Elem()
 	fieldMap := map[string]Field{}
 	for i := 0; i < v.NumField(); i++ {
@@ -74,8 +91,13 @@ func SetupStructure(instance interface{}) map[string]Field {
 	return fieldMap
 }
 
-func SearchTicket(key, searchKey string, fieldList map[string]Field) (resultList []interface{}, err error) {
-	field, ok := fieldList[key]
+func SearchTicket(structKey, fieldKey, searchKey string, fieldListMap map[string]map[string]Field) (resultList []interface{}, err error) {
+	fieldList, ok := fieldListMap[structKey]
+	if !ok {
+		err = errors.New("structKey not found")
+		return
+	}
+	field, ok := fieldList[fieldKey]
 	if !ok {
 		err = errors.New("field not found")
 		return

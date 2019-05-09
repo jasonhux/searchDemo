@@ -13,18 +13,17 @@ func main() {
 	//Load files and unmarshal
 	// loadData(&tickets)
 	start := time.Now()
-	tickets := loadFile()
-	fieldList := search.PrepareTickets(tickets)
+	tickets, users, organizations, _ := loadFile()
+	fieldListMap := search.PrepareData(tickets, users, organizations)
 
-	resultsList, err := search.SearchTicket("Status", "hold", fieldList)
+	resultsList, err := search.SearchTicket("1", "Status", "hold", fieldListMap)
 	if err != nil {
 		fmt.Println(err)
 	} else {
 		for _, result := range resultsList {
 			ticket := result.(*search.Ticket)
-			fmt.Println(ticket.ID)
+			fmt.Printf("%+v\n", ticket)
 		}
-		// fmt.Println(resultsList)
 	}
 	colapse := time.Now().Sub(start)
 	fmt.Println(colapse)
@@ -49,11 +48,15 @@ func main() {
 	// }
 }
 
-func loadFile() []*search.Ticket {
-	tickets := []*search.Ticket{}
+func loadFile() (tickets []*search.Ticket, users []*search.User, organizations []*search.Organization, err error) {
 	data, _ := ioutil.ReadFile("tickets.json")
 	json.Unmarshal(data, &tickets)
-	return tickets
+	data, _ = ioutil.ReadFile("users.json")
+	json.Unmarshal(data, &users)
+	data, _ = ioutil.ReadFile("organizations.json")
+	json.Unmarshal(data, &organizations)
+	//add error handling
+	return
 }
 
 func loadData(tickets *[]search.Ticket) {
