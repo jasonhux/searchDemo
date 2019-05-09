@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"searchDemo/src/search"
 	"time"
 )
@@ -14,20 +15,47 @@ func main() {
 	// loadData(&tickets)
 	start := time.Now()
 	tickets, users, organizations, _ := loadFile()
-	fieldListMap := search.PrepareData(tickets, users, organizations)
+	structMap := search.PrepareStructMap(tickets, users, organizations)
+	colapse := time.Now().Sub(start)
+	fmt.Println("Load consumed:", colapse)
+	s := search.NewService(structMap)
 
-	resultsList, err := search.SearchTicket("1", "Status", "hold", fieldListMap)
+	scanner := bufio.NewScanner(os.Stdin)
+
+	displayMenu()
+	scanner.Scan()
+	searchStructParam := scanner.Text()
+	err := s.SetSearchStruct(searchStructParam)
 	if err != nil {
 		fmt.Println(err)
-	} else {
-		for _, result := range resultsList {
-			ticket := result.(*search.Ticket)
-			fmt.Printf("%+v\n", ticket)
-		}
+		return
 	}
-	colapse := time.Now().Sub(start)
-	fmt.Println(colapse)
+	scanner.Scan()
+	searchFieldParam := scanner.Text()
+	err = s.SetSearchFieldValue(searchFieldParam)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
+	scanner.Scan()
+	searchValueParam := scanner.Text()
+	start = time.Now()
+	resultsList, err := s.Search(searchValueParam)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// resultsList, err := search.Search("1", "Status", "hold", structMap)
+
+	for _, result := range resultsList {
+		ticket := result.(*search.Ticket)
+		fmt.Printf("%+v\n", ticket)
+	}
+	colapse = time.Now().Sub(start)
+	fmt.Println("Search and print time consumed:", colapse)
+	scanner.Scan()
 	//buf := bufio.NewReader(os.Stdin)
 	// scanner := bufio.NewScanner(os.Stdin)
 	// for {

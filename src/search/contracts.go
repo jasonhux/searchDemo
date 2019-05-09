@@ -19,7 +19,6 @@ type Ticket struct {
 	DueAt          string   `json:"due_at"`
 	Via            string   `json:"via"`
 }
-
 //User struct for unmarshal user json object
 type User struct {
 	ID             int      `json:"_id"`
