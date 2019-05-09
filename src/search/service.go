@@ -1,9 +1,9 @@
 package search
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
-	"time"
 )
 
 type Service interface {
@@ -28,21 +28,38 @@ func (s *service) PrepareData() {
 
 }
 
-func PrepareTickets(tickets []*Ticket) {
+func PrepareTickets(tickets []*Ticket) map[string]Field {
 	//timenow
-	start := time.Now()
+	fmt.Println(len(tickets))
+	//start := time.Now()
 	fieldList := SetupStructure(&Ticket{})
 	for _, ticket := range tickets {
 		v := reflect.ValueOf(ticket).Elem()
 		for k := range fieldList {
-			fieldValue := fmt.Sprintf("%v", v.FieldByName(k))
-			matchedTicketList, _ := fieldList[k].ValueMap[fieldValue]
-			updatedTicketList := append(matchedTicketList, ticket)
-			fieldList[k].ValueMap[fieldValue] = updatedTicketList
+			updatedTicketList := []interface{}{}
+			//make sure array change and bool type change is required
+			switch fieldList[k].Type {
+			case "[]string":
+				list, ok := v.FieldByName(k).Interface().([]string)
+				if ok {
+					for _, element := range list {
+						matchedTicketList, _ := fieldList[k].ValueMap[element]
+						updatedTicketList = append(matchedTicketList, ticket)
+						fieldList[k].ValueMap[element] = updatedTicketList
+					}
+				}
+				break
+			default:
+				fieldValue := fmt.Sprintf("%v", v.FieldByName(k))
+				matchedTicketList, _ := fieldList[k].ValueMap[fieldValue]
+				updatedTicketList = append(matchedTicketList, ticket)
+				fieldList[k].ValueMap[fieldValue] = updatedTicketList
+			}
 		}
 	}
-	colapse := time.Now().Sub(start)
-	fmt.Println(colapse)
+	// colapse := time.Now().Sub(start)
+	// fmt.Println(colapse)
+	return fieldList
 }
 
 func SetupStructure(instance interface{}) map[string]Field {
@@ -55,4 +72,18 @@ func SetupStructure(instance interface{}) map[string]Field {
 		fieldMap[n] = Field{Type: t, ValueMap: map[string][]interface{}{}}
 	}
 	return fieldMap
+}
+
+func SearchTicket(key, searchKey string, fieldList map[string]Field) (resultList []interface{}, err error) {
+	field, ok := fieldList[key]
+	if !ok {
+		err = errors.New("field not found")
+		return
+	}
+	//consider to do a type check for searchKey
+	resultList, ok = field.ValueMap[searchKey]
+	if !ok {
+		err = errors.New("no results found")
+	}
+	return
 }

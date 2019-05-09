@@ -6,14 +6,28 @@ import (
 	"fmt"
 	"io/ioutil"
 	"searchDemo/src/search"
+	"time"
 )
 
 func main() {
 	//Load files and unmarshal
 	// loadData(&tickets)
-
+	start := time.Now()
 	tickets := loadFile()
-	search.PrepareTickets(tickets)
+	fieldList := search.PrepareTickets(tickets)
+
+	resultsList, err := search.SearchTicket("Status", "hold", fieldList)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		for _, result := range resultsList {
+			ticket := result.(*search.Ticket)
+			fmt.Println(ticket.ID)
+		}
+		// fmt.Println(resultsList)
+	}
+	colapse := time.Now().Sub(start)
+	fmt.Println(colapse)
 
 	//buf := bufio.NewReader(os.Stdin)
 	// scanner := bufio.NewScanner(os.Stdin)
