@@ -19,6 +19,7 @@ type Ticket struct {
 	DueAt          string   `json:"due_at"`
 	Via            string   `json:"via"`
 }
+
 //User struct for unmarshal user json object
 type User struct {
 	ID             int      `json:"_id"`
@@ -53,4 +54,11 @@ type Organization struct {
 	Details       string   `json:"details"`
 	SharedTickets bool     `json:"shared_tickets"`
 	Tags          []string `json:"tags"`
+}
+
+type TicketForDisplay struct {
+	Ticket
+	SubmitterName    string `json:"submitter_name"`
+	AssigneeName     string `json:"assignee_name"`
+	OrganizationName string `json:"organization_name"`
 }

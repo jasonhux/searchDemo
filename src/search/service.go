@@ -1,13 +1,15 @@
 package search
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
+	"strconv"
 )
 
 type Service interface {
-	SetSearchStruct(param string) error
+	SetSearchStruct(param string) (fieldMap map[string]Field, err error)
 	SetSearchFieldValue(param string) error
 	Search(param string) (resultsList []interface{}, err error)
 }
@@ -94,32 +96,14 @@ func initFieldMap(instance interface{}) map[string]Field {
 	return fieldMap
 }
 
-func Search(structKey, fieldKey, searchKey string, structMap map[string]map[string]Field) (resultList []interface{}, err error) {
-	fieldMap, ok := structMap[structKey]
+func (s *service) SetSearchStruct(param string) (fieldMap map[string]Field, err error) {
+	fieldMap, ok := s.StructMap[param]
 	if !ok {
-		err = errors.New("structKey not found")
+		err = errors.New("No struct found")
 		return
-	}
-	field, ok := fieldMap[fieldKey]
-	if !ok {
-		err = errors.New("field not found")
-		return
-	}
-	//consider to do a type check for searchKey
-	resultList, ok = field.ValueMap[searchKey]
-	if !ok {
-		err = errors.New("no results found")
-	}
-	return
-}
-
-func (s *service) SetSearchStruct(param string) error {
-	_, ok := s.StructMap[param]
-	if !ok {
-		return errors.New("No struct found")
 	}
 	s.SelectedStructKey = param
-	return nil
+	return
 }
 
 func (s *service) SetSearchFieldValue(param string) error {
@@ -140,5 +124,88 @@ func (s *service) Search(param string) (resultsList []interface{}, err error) {
 	if !ok {
 		err = errors.New("No results found")
 	}
+
+	s.processResults(resultsList)
+
 	return
+}
+
+func (s *service) processResults(resultsList []interface{}) (processedResultsList []interface{}, err error) {
+
+	switch resultsList[0].(type) {
+	case *Ticket:
+		return processTicketResults(resultsList, s.StructMap)
+	case *User:
+		return processUserResults(resultsList, s.StructMap)
+	case *Organization:
+		return processOrganizationResults(resultsList, s.StructMap)
+	}
+	err = errors.New("No matched type for process")
+	return
+}
+
+func processTicketResults(resultsList []interface{}, structMap map[string]map[string]Field) (processedResultsList []interface{}, err error) {
+	//No need to check map contains the key here as if the struct map is not complete, the processData step should have already reported errors
+	userMap, _ := structMap["2"]
+	organizationMap, _ := structMap["3"]
+	ticketsForDisplay := []TicketForDisplay{}
+
+	for _, result := range resultsList {
+		ticket := result.(*Ticket)
+		//get assignee name
+		userIDField, _ := userMap["ID"]
+		matchedAssigneesPtr, ok := userIDField.ValueMap[strconv.Itoa(ticket.AssigneeID)]
+		if !ok {
+			//err = errors.New("No linked user was found")
+			fmt.Println("No linked user was found")
+			continue
+			//change to skip
+		}
+		//relationship between ticket and assignee is 1:1; thus take the first user pointer
+		//add if length = 0 check???
+		assignee := matchedAssigneesPtr[0].(*User)
+
+		matchedSubmitterPtr, ok := userIDField.ValueMap[strconv.Itoa(ticket.SubmitterID)]
+		if !ok {
+			//err = errors.New("No linked user was found")
+			fmt.Println("No linked user was found")
+			continue
+			//change to skip
+		}
+		//relationship between ticket and assignee is 1:1; thus take the first user pointer
+		//add if length = 0 check???
+		submitter := matchedSubmitterPtr[0].(*User)
+
+		//dont forget to add submitterID
+
+		orgIDField, _ := organizationMap["ID"]
+		matchedOrgPtr, ok := orgIDField.ValueMap[strconv.Itoa(ticket.OrganizationID)]
+		if !ok {
+			fmt.Println("No linked company was found")
+			continue
+		}
+		org := matchedOrgPtr[0].(*Organization)
+		ticketForDisplay := TicketForDisplay{Ticket: *ticket, AssigneeName: assignee.Name, SubmitterName: submitter.Name, OrganizationName: org.Name}
+		//fmt.Printf("%+v\n", TicketForDisplay)
+		ticketsForDisplay = append(ticketsForDisplay, ticketForDisplay)
+	}
+	b, _ := json.Marshal(ticketsForDisplay)
+	println(string(b))
+	return resultsList, nil
+}
+
+func processUserResults(resultsList []interface{}, structMap map[string]map[string]Field) (processedResultsList []interface{}, err error) {
+	for _, result := range resultsList {
+		user := result.(*User)
+		fmt.Printf("%+v\n", user)
+	}
+	return resultsList, nil
+}
+
+func processOrganizationResults(resultsList []interface{}, structMap map[string]map[string]Field) (processedResultsList []interface{}, err error) {
+	for _, result := range resultsList {
+		organization := result.(*Organization)
+		fmt.Printf("%+v\n", organization)
+	}
+	return resultsList, nil
 }

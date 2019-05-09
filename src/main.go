@@ -23,13 +23,22 @@ func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 
 	displayMenu()
+	fmt.Println("Select 1) Tickets or 2) Users or 3) Organizations")
+	fmt.Print("> ")
 	scanner.Scan()
 	searchStructParam := scanner.Text()
-	err := s.SetSearchStruct(searchStructParam)
+	fieldMap, err := s.SetSearchStruct(searchStructParam)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+
+	fmt.Println("Available search field")
+	for k := range fieldMap {
+		fmt.Println(k)
+	}
+	fmt.Println("Enter search field")
+	fmt.Print("> ")
 	scanner.Scan()
 	searchFieldParam := scanner.Text()
 	err = s.SetSearchFieldValue(searchFieldParam)
@@ -38,10 +47,13 @@ func main() {
 		return
 	}
 
+	fmt.Println("Enter search value")
+	fmt.Print("> ")
 	scanner.Scan()
 	searchValueParam := scanner.Text()
 	start = time.Now()
-	resultsList, err := s.Search(searchValueParam)
+	// resultsList, err := s.Search(searchValueParam)
+	_, err = s.Search(searchValueParam)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -49,10 +61,10 @@ func main() {
 
 	// resultsList, err := search.Search("1", "Status", "hold", structMap)
 
-	for _, result := range resultsList {
-		ticket := result.(*search.Ticket)
-		fmt.Printf("%+v\n", ticket)
-	}
+	// for _, result := range resultsList {
+	// 	ticket := result.(*search.Ticket)
+	// 	fmt.Printf("%+v\n", ticket)
+	// }
 	colapse = time.Now().Sub(start)
 	fmt.Println("Search and print time consumed:", colapse)
 	scanner.Scan()
@@ -97,22 +109,4 @@ func displayMenu() {
 	fmt.Println("*Press 2 to view a list of searchable fields")
 	fmt.Println("*Type 'quit' to exit")
 	fmt.Print("> ")
-}
-
-func selectSearchOptions(buf *bufio.Scanner) {
-	// input, _ := buf.ReadBytes('\n')
-
-	//have a mapping table instead of case;
-	//check whether it's a number,if yes, whether it's out of range, or otherwise throw error
-	buf.Scan()
-	switch buf.Text() {
-	case "1":
-		fmt.Println("You selected user")
-		break
-	case "2":
-		fmt.Println("You selected 2")
-		break
-	default:
-		fmt.Println("default")
-	}
 }
