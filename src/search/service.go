@@ -118,7 +118,6 @@ func (s *service) setSearchFieldValue(param string) (fieldType string, err error
 		return
 	}
 	s.SelectedFieldKey = paramLowerCase
-	//return type as well for notice
 	return field.Type, nil
 }
 
@@ -149,17 +148,19 @@ func (s *service) processResults(resultsList []interface{}) (processedResults st
 }
 
 func processTicketResults(resultsList []interface{}, structMap map[string]map[string]data.Field) (processedResults string, err error) {
-	//No need to check map contains the key here as if the struct map is not complete, the processData step should have already reported errors
+	//Skip to check map contains the key here as if the struct map is not complete, the processData step should have already reported errors.
 	userMap, _ := structMap["2"]
 	organizationMap, _ := structMap["3"]
 	ticketsForDisplay := []data.TicketForDisplay{}
 
 	for _, result := range resultsList {
 		ticket := result.(*data.Ticket)
-		//get assignee name
+
+		//Find linked struct to the ticket, such as assignee, submitter and organization.
+
 		ulist := getLinkedStructs(strconv.Itoa(ticket.AssigneeID), userMap["id"])
-		//relationship between ticket and assignee is 1:1; thus take the first user pointer
-		//add if length = 0 check???
+		//Relationship between ticket and assignee is 1:1; thus take the first user pointer
+		//If ulist is empty, assignee is a empty struct
 		assignee := &data.User{}
 		if len(ulist) > 0 {
 			assignee = ulist[0].(*data.User)
@@ -177,6 +178,7 @@ func processTicketResults(resultsList []interface{}, structMap map[string]map[st
 			org = orgList[0].(*data.Organization)
 		}
 
+		//Create a ticketForDisplay struct which contains the ticket information, and the linked struct values
 		ticketForDisplay := data.TicketForDisplay{Ticket: *ticket, AssigneeName: assignee.Name, SubmitterName: submitter.Name, OrganizationName: org.Name}
 		ticketsForDisplay = append(ticketsForDisplay, ticketForDisplay)
 	}
@@ -193,16 +195,17 @@ func processUserResults(resultsList []interface{}, structMap map[string]map[stri
 	organizationMap, _ := structMap["3"]
 	usersForDisplay := []data.UserForDisplay{}
 	for _, result := range resultsList {
+
 		assignedTicketIDs := []string{}
 		submittedTicketIDs := []string{}
 		user := result.(*data.User)
-		//get organization name that user belongs to
+
+		//Find linked struct to the user, such as assigned tickets, submitted tickets and organization.
 		orgList := getLinkedStructs(strconv.Itoa(user.OrganizationID), organizationMap["id"])
 		org := &data.Organization{}
 		if len(orgList) > 0 {
 			org = orgList[0].(*data.Organization)
 		}
-		//get tickets that the user id is shown in the assignee field
 		ticketList := getLinkedStructs(strconv.Itoa(user.ID), ticketMap["assigneeid"])
 
 		for _, t := range ticketList {
@@ -216,6 +219,7 @@ func processUserResults(resultsList []interface{}, structMap map[string]map[stri
 			ticket := t.(*data.Ticket)
 			submittedTicketIDs = append(submittedTicketIDs, ticket.ID)
 		}
+
 		userForDisplay := data.UserForDisplay{User: *user, OrganizationName: org.Name, SubmittedTicketIDs: submittedTicketIDs, AssignedTicketsIDs: assignedTicketIDs}
 		usersForDisplay = append(usersForDisplay, userForDisplay)
 	}
@@ -235,6 +239,8 @@ func processOrganizationResults(resultsList []interface{}, structMap map[string]
 		userNames := []string{}
 		ticketIDs := []string{}
 		organization := result.(*data.Organization)
+
+		//Find linked struct to the organization, such as all users and tickets with matched organization id.
 		ticketList := getLinkedStructs(strconv.Itoa(organization.ID), ticketMap["organizationid"])
 		for _, t := range ticketList {
 			ticket := t.(*data.Ticket)
@@ -258,7 +264,7 @@ func processOrganizationResults(resultsList []interface{}, structMap map[string]
 }
 
 func getLinkedStructs(value string, linkedField data.Field) (linkedStructs []interface{}) {
-	//if there is no available key in the value map, return an empty linkedStructs back; this means the searched struct has no linked structs on the requested field
+	//If there is no available key in the value map, return an empty linkedStructs back; this means the searched struct has no linked structs on the requested field
 	linkedStructs, _ = linkedField.ValueMap[value]
 	return
 }

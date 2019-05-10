@@ -1,7 +1,6 @@
 package interaction
 
 import (
-	"bufio"
 	"fmt"
 	"strings"
 )
@@ -11,7 +10,7 @@ type Service interface {
 }
 
 type service struct {
-	Scanner *bufio.Scanner
+	Scanner Scanner
 }
 
 type Scanner interface {
@@ -19,7 +18,7 @@ type Scanner interface {
 	Text() string
 }
 
-func NewService(scanner *bufio.Scanner) Service {
+func NewService(scanner Scanner) Service {
 	return &service{scanner}
 }
 
