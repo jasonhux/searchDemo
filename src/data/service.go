@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"reflect"
+	"strings"
 )
 
 type Service interface {
@@ -17,8 +18,9 @@ type service struct {
 }
 
 type Field struct {
-	Type     string
-	ValueMap map[string][]interface{}
+	Type         string
+	NameWithCase string
+	ValueMap     map[string][]interface{}
 }
 
 func NewService() Service {
@@ -47,32 +49,35 @@ func (s *service) PrepareStructMap(tickets []*Ticket, users []*User, organizatio
 	//dont forget to add error handling
 }
 
-//ProcessFieldMap func is to convert object list such as tickets to a map structure; map key is the struct field name (ex. Name). The map value is the Field struct;
+//ProcessFieldMap func is to convert object list such as tickets to a map structure;
+//map key is the struct field name (ex. Name). The map value is the Field struct;
 //Field struct contains the 1. map key's type (ex. string, int) and 2. a nested value map;
-//The nested value map has the struct field value in string format as the key (ex. "A Drama in Gabon", or "true"); the map value are a list of pointers to the structs which contains the map key;
+//The nested value map has the struct field value in string format as the key (ex. "A Drama in Gabon", or "true");
+//the map value is a list of pointers to the structs which contains the map key;
 //When a field contains an array, treat each string in the array as a separate value map key;
 func ProcessFieldMap(structList []interface{}) map[string]Field {
 	fieldMap := initFieldMap(structList[0])
-	for _, ticket := range structList {
-		v := reflect.ValueOf(ticket).Elem()
+	for _, s := range structList {
+		v := reflect.ValueOf(s).Elem()
 		for k := range fieldMap {
-			updatedTicketList := []interface{}{}
+			fieldNameWithCase := fieldMap[k].NameWithCase
+			updatedPtrList := []interface{}{}
 			switch fieldMap[k].Type {
 			case "[]string":
-				list, ok := v.FieldByName(k).Interface().([]string)
+				list, ok := v.FieldByName(fieldNameWithCase).Interface().([]string)
 				if ok {
 					for _, element := range list {
-						matchedTicketList, _ := fieldMap[k].ValueMap[element]
-						updatedTicketList = append(matchedTicketList, ticket)
-						fieldMap[k].ValueMap[element] = updatedTicketList
+						matchedPtrList, _ := fieldMap[k].ValueMap[strings.ToLower(element)]
+						updatedPtrList = append(matchedPtrList, s)
+						fieldMap[k].ValueMap[element] = updatedPtrList
 					}
 				}
 				break
 			default:
-				fieldValue := fmt.Sprintf("%v", v.FieldByName(k))
-				matchedTicketList, _ := fieldMap[k].ValueMap[fieldValue]
-				updatedTicketList = append(matchedTicketList, ticket)
-				fieldMap[k].ValueMap[fieldValue] = updatedTicketList
+				fieldValue := strings.ToLower(fmt.Sprintf("%v", v.FieldByName(fieldNameWithCase)))
+				matchedPtrList, _ := fieldMap[k].ValueMap[fieldValue]
+				updatedPtrList = append(matchedPtrList, s)
+				fieldMap[k].ValueMap[fieldValue] = updatedPtrList
 			}
 		}
 	}
@@ -84,9 +89,11 @@ func initFieldMap(instance interface{}) map[string]Field {
 	fieldMap := map[string]Field{}
 	for i := 0; i < v.NumField(); i++ {
 		f := v.Field(i)
-		n := v.Type().Field(i).Name
+		//to support case insensitive search
+		fieldNameWithCase := v.Type().Field(i).Name
+		n := strings.ToLower(fieldNameWithCase)
 		t := f.Type().String()
-		fieldMap[n] = Field{Type: t, ValueMap: map[string][]interface{}{}}
+		fieldMap[n] = Field{Type: t, ValueMap: map[string][]interface{}{}, NameWithCase: fieldNameWithCase}
 	}
 	return fieldMap
 }

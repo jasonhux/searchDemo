@@ -17,6 +17,8 @@ func main() {
 	err := s.SetStructMap()
 	if err != nil {
 		fmt.Println(err)
+		//stop here
+		s.RequestNewSearch()
 		return
 	}
 	for {
