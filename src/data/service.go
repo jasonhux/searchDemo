@@ -52,8 +52,6 @@ func (s *service) PrepareStructMap(tickets []*Ticket, users []*User, organizatio
 //The nested value map has the struct field value in string format as the key (ex. "A Drama in Gabon", or "true"); the map value are a list of pointers to the structs which contains the map key;
 //When a field contains an array, treat each string in the array as a separate value map key;
 func ProcessFieldMap(structList []interface{}) map[string]Field {
-	fmt.Println(len(structList))
-
 	fieldMap := initFieldMap(structList[0])
 	for _, ticket := range structList {
 		v := reflect.ValueOf(ticket).Elem()

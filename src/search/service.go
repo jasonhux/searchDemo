@@ -5,25 +5,80 @@ import (
 	"errors"
 	"fmt"
 	"searchDemo/src/data"
+	"searchDemo/src/interaction"
 	"strconv"
 )
 
 type Service interface {
+	Search() (isQuit bool, err error)
 	SetStructMap() (err error)
 	SetSearchStruct(param string) (fieldMap map[string]data.Field, err error)
 	SetSearchFieldValue(param string) error
-	Search(param string) (results string, err error)
+	RetrieveResults(param string) (results string, err error)
+	RequestNewSearch() bool
 }
 
 type service struct {
-	DataService       data.Service
-	StructMap         map[string]map[string]data.Field
-	SelectedStructKey string
-	SelectedFieldKey  string
+	DataService        data.Service
+	InteractionService interaction.Service
+	StructMap          map[string]map[string]data.Field
+	SelectedStructKey  string
+	SelectedFieldKey   string
 }
 
-func NewService(dataService data.Service) Service {
-	return &service{DataService: dataService}
+func NewService(dataService data.Service, interactionService interaction.Service) Service {
+	return &service{DataService: dataService, InteractionService: interactionService}
+}
+
+func (s *service) Search() (isQuit bool, err error) {
+	fmt.Println("Welcome to Zendesk search. You can type 'quit' to leave the application")
+	fmt.Println("Select 1) Tickets or 2) Users or 3) Organizations")
+	isQuit, searchStructParam := s.InteractionService.GetUserInput()
+	if isQuit {
+		return
+	}
+	fieldMap, err := s.SetSearchStruct(searchStructParam)
+	if err != nil {
+		return
+	}
+
+	fmt.Println("Available search field")
+	fmt.Println("======================")
+	for k := range fieldMap {
+		fmt.Println(k)
+	}
+	fmt.Println("======================")
+	fmt.Println("Please enter a search field from the above list")
+	isQuit, searchFieldParam := s.InteractionService.GetUserInput()
+	if isQuit {
+		return
+	}
+	err = s.SetSearchFieldValue(searchFieldParam)
+	if err != nil {
+		return
+	}
+
+	fmt.Println("please enter search value")
+	isQuit, searchValueParam := s.InteractionService.GetUserInput()
+	if isQuit {
+		return
+	}
+	results, err := s.RetrieveResults(searchValueParam)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println(results)
+	}
+	return
+}
+
+func (s *service) RequestNewSearch() bool {
+	fmt.Println("Type 'n' or 'quit' to quit or any other key to start a new search")
+	isQuit, input := s.InteractionService.GetUserInput()
+	if isQuit || input == "n" {
+		return false
+	}
+	return true
 }
 
 func (s *service) SetStructMap() (err error) {
@@ -59,7 +114,7 @@ func (s *service) SetSearchFieldValue(param string) error {
 	return nil
 }
 
-func (s *service) Search(param string) (results string, err error) {
+func (s *service) RetrieveResults(param string) (results string, err error) {
 	fieldMap, _ := s.StructMap[s.SelectedStructKey]
 	Field, _ := fieldMap[s.SelectedFieldKey]
 	resultsList, ok := Field.ValueMap[param]
