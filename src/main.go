@@ -59,33 +59,10 @@ func main() {
 		return
 	}
 
-	// resultsList, err := search.Search("1", "Status", "hold", structMap)
-
-	// for _, result := range resultsList {
-	// 	ticket := result.(*search.Ticket)
-	// 	fmt.Printf("%+v\n", ticket)
-	// }
 	colapse = time.Now().Sub(start)
 	fmt.Println("Search and print time consumed:", colapse)
 	scanner.Scan()
-	//buf := bufio.NewReader(os.Stdin)
-	// scanner := bufio.NewScanner(os.Stdin)
-	// for {
-	// 	displayMenu()
-	// 	loadFile(tickets)
-	// 	//selectSearchOptions(scanner)
 
-	// 	// sentence, err := buf.ReadString('\n')
-	// 	// if err != nil {
-	// 	// 	fmt.
-	// 	// 		Println(err)
-	// 	// } else {
-	// 	// 	if strings.Contains(sentence, "exit") {
-	// 	// 		break
-	// 	// 	}
-	// 	// 	fmt.Print(sentence)
-	// 	// }
-	// }
 }
 
 func loadFile() (tickets []*search.Ticket, users []*search.User, organizations []*search.Organization, err error) {
@@ -97,10 +74,6 @@ func loadFile() (tickets []*search.Ticket, users []*search.User, organizations [
 	json.Unmarshal(data, &organizations)
 	//add error handling
 	return
-}
-
-func loadData(tickets *[]search.Ticket) {
-	fmt.Println("Loading Data...")
 }
 
 func displayMenu() {

@@ -153,38 +153,32 @@ func processTicketResults(resultsList []interface{}, structMap map[string]map[st
 	for _, result := range resultsList {
 		ticket := result.(*Ticket)
 		//get assignee name
-		userIDField, _ := userMap["ID"]
-		matchedAssigneesPtr, ok := userIDField.ValueMap[strconv.Itoa(ticket.AssigneeID)]
-		if !ok {
-			//err = errors.New("No linked user was found")
-			fmt.Println("No linked user was found")
+		ulist, e := getLinkedUsers(strconv.Itoa(ticket.AssigneeID), userMap["ID"])
+		if e != nil {
+			// err = e
+			// return
 			continue
-			//change to skip
 		}
 		//relationship between ticket and assignee is 1:1; thus take the first user pointer
 		//add if length = 0 check???
-		assignee := matchedAssigneesPtr[0].(*User)
+		assignee := ulist[0]
 
-		matchedSubmitterPtr, ok := userIDField.ValueMap[strconv.Itoa(ticket.SubmitterID)]
-		if !ok {
-			//err = errors.New("No linked user was found")
-			fmt.Println("No linked user was found")
-			continue
-			//change to skip
-		}
-		//relationship between ticket and assignee is 1:1; thus take the first user pointer
-		//add if length = 0 check???
-		submitter := matchedSubmitterPtr[0].(*User)
-
-		//dont forget to add submitterID
-
-		orgIDField, _ := organizationMap["ID"]
-		matchedOrgPtr, ok := orgIDField.ValueMap[strconv.Itoa(ticket.OrganizationID)]
-		if !ok {
-			fmt.Println("No linked company was found")
+		ulist, e = getLinkedUsers(strconv.Itoa(ticket.SubmitterID), userMap["ID"])
+		if e != nil {
+			// err = e
+			// return
 			continue
 		}
-		org := matchedOrgPtr[0].(*Organization)
+		submitter := ulist[0]
+
+		orgList, e := getLinkedOrganizations(strconv.Itoa(ticket.OrganizationID), organizationMap["ID"])
+		if e != nil {
+			// err = e
+			// return
+			continue
+		}
+		org := orgList[0]
+
 		ticketForDisplay := TicketForDisplay{Ticket: *ticket, AssigneeName: assignee.Name, SubmitterName: submitter.Name, OrganizationName: org.Name}
 		//fmt.Printf("%+v\n", TicketForDisplay)
 		ticketsForDisplay = append(ticketsForDisplay, ticketForDisplay)
@@ -208,4 +202,30 @@ func processOrganizationResults(resultsList []interface{}, structMap map[string]
 		fmt.Printf("%+v\n", organization)
 	}
 	return resultsList, nil
+}
+
+func getLinkedUsers(value string, userField Field) (users []*User, err error) {
+	matchedUserPtrs, ok := userField.ValueMap[value]
+	if !ok || !(len(matchedUserPtrs) > 0) {
+		err = errors.New("No linked user was found")
+		return
+
+	}
+	for _, userPtr := range matchedUserPtrs {
+		users = append(users, userPtr.(*User))
+	}
+	return
+}
+
+func getLinkedOrganizations(value string, organizationField Field) (organizations []*Organization, err error) {
+	matchedOrgPtrs, ok := organizationField.ValueMap[value]
+	if !ok || !(len(matchedOrgPtrs) > 0) {
+		err = errors.New("No linked organization was found")
+		return
+
+	}
+	for _, orgPtr := range matchedOrgPtrs {
+		organizations = append(organizations, orgPtr.(*Organization))
+	}
+	return
 }
