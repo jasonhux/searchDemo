@@ -11,8 +11,6 @@ import (
 )
 
 func main() {
-	//Load files and unmarshal
-	// loadData(&tickets)
 	start := time.Now()
 	tickets, users, organizations, _ := loadFile()
 	structMap := search.PrepareStructMap(tickets, users, organizations)
@@ -52,13 +50,12 @@ func main() {
 	scanner.Scan()
 	searchValueParam := scanner.Text()
 	start = time.Now()
-	// resultsList, err := s.Search(searchValueParam)
-	_, err = s.Search(searchValueParam)
+	results, err := s.Search(searchValueParam)
 	if err != nil {
 		fmt.Println(err)
-		return
+	} else {
+		fmt.Println(results)
 	}
-
 	colapse = time.Now().Sub(start)
 	fmt.Println("Search and print time consumed:", colapse)
 	scanner.Scan()
