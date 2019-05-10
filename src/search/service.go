@@ -68,12 +68,26 @@ func (s *service) Search() (results string, isQuit bool, err error) {
 		return
 	}
 	start := time.Now()
-	results, err = s.retrieveResults(searchValueParam)
-	//remember to remove the star time measurement
+	resultList, err := retrieveResults(s.SelectedStructKey, s.SelectedFieldKey, searchValueParam, s.StructMap)
+	if err != nil {
+		return
+	}
+
+	//Convert to json string for output
+	resultsBytes, err := json.Marshal(resultList)
+	if err != nil {
+		return
+	}
+	results = string(resultsBytes)
+	//remove later
 	colapsed := time.Now().Sub(start)
 	results += fmt.Sprintf("%v", colapsed)
 	return
 }
+
+// func (s *service) DirectSearchWithValue(value string) (results string, isQuit bool, err error) {
+// 	//  s.
+// }
 
 func (s *service) RequestNewSearch() bool {
 	fmt.Println("Type 'n' or 'quit' to quit or any other key to start a new search")
@@ -121,33 +135,33 @@ func (s *service) setSearchFieldValue(param string) (fieldType string, err error
 	return field.Type, nil
 }
 
-func (s *service) retrieveResults(param string) (results string, err error) {
+func retrieveResults(structKey, FieldKey, param string, structMap map[string]map[string]data.Field) (results []interface{}, err error) {
 	paramLowerCase := strings.ToLower(param)
-	fieldMap, _ := s.StructMap[s.SelectedStructKey]
-	Field, _ := fieldMap[s.SelectedFieldKey]
+	fieldMap, _ := structMap[structKey]
+	Field, _ := fieldMap[FieldKey]
 	resultsList, ok := Field.ValueMap[paramLowerCase]
 	if !ok {
 		err = errors.New("No results found")
 		return
 	}
-	return s.processResults(resultsList)
+	return processResults(resultsList, structMap)
 }
 
-func (s *service) processResults(resultsList []interface{}) (processedResults string, err error) {
+func processResults(resultsList []interface{}, structMap map[string]map[string]data.Field) (processedResults []interface{}, err error) {
 
 	switch resultsList[0].(type) {
 	case *data.Ticket:
-		return processTicketResults(resultsList, s.StructMap)
+		return processTicketResults(resultsList, structMap)
 	case *data.User:
-		return processUserResults(resultsList, s.StructMap)
+		return processUserResults(resultsList, structMap)
 	case *data.Organization:
-		return processOrganizationResults(resultsList, s.StructMap)
+		return processOrganizationResults(resultsList, structMap)
 	}
 	err = errors.New("No matched type for process")
 	return
 }
 
-func processTicketResults(resultsList []interface{}, structMap map[string]map[string]data.Field) (processedResults string, err error) {
+func processTicketResults(resultsList []interface{}, structMap map[string]map[string]data.Field) (processedResults []interface{}, err error) {
 	//Skip to check map contains the key here as if the struct map is not complete, the processData step should have already reported errors.
 	userMap, _ := structMap["2"]
 	organizationMap, _ := structMap["3"]
@@ -186,11 +200,13 @@ func processTicketResults(resultsList []interface{}, structMap map[string]map[st
 		err = errors.New("No tickets are available in the search")
 		return
 	}
-	b, err := json.Marshal(ticketsForDisplay)
-	return string(b), err
+	for _, ticket := range ticketsForDisplay {
+		processedResults = append(processedResults, ticket)
+	}
+	return
 }
 
-func processUserResults(resultsList []interface{}, structMap map[string]map[string]data.Field) (processedResults string, err error) {
+func processUserResults(resultsList []interface{}, structMap map[string]map[string]data.Field) (processedResults []interface{}, err error) {
 	ticketMap, _ := structMap["1"]
 	organizationMap, _ := structMap["3"]
 	usersForDisplay := []data.UserForDisplay{}
@@ -227,11 +243,13 @@ func processUserResults(resultsList []interface{}, structMap map[string]map[stri
 		err = errors.New("No users are available in the search")
 		return
 	}
-	b, err := json.Marshal(usersForDisplay)
-	return string(b), err
+	for _, user := range usersForDisplay {
+		processedResults = append(processedResults, user)
+	}
+	return
 }
 
-func processOrganizationResults(resultsList []interface{}, structMap map[string]map[string]data.Field) (processedResults string, err error) {
+func processOrganizationResults(resultsList []interface{}, structMap map[string]map[string]data.Field) (processedResults []interface{}, err error) {
 	ticketMap, _ := structMap["1"]
 	userMap, _ := structMap["2"]
 	orgsForDisplay := []data.OrganizationForDisplay{}
@@ -259,8 +277,10 @@ func processOrganizationResults(resultsList []interface{}, structMap map[string]
 		err = errors.New("No organizations are available in the search")
 		return
 	}
-	b, err := json.Marshal(orgsForDisplay)
-	return string(b), err
+	for _, org := range orgsForDisplay {
+		processedResults = append(processedResults, org)
+	}
+	return
 }
 
 func getLinkedStructs(value string, linkedField data.Field) (linkedStructs []interface{}) {
