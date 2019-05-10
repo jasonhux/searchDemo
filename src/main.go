@@ -20,19 +20,21 @@ func main() {
 		return
 	}
 	for {
-		isQuit, err := s.Search()
+		results, isQuit, err := s.Search()
 		if isQuit {
 			break
 		}
 		if err != nil {
 			fmt.Println(err)
+		} else {
+			fmt.Println(results)
 		}
+
 		isNewSearchRequired := s.RequestNewSearch()
 		if isNewSearchRequired {
 			continue
 		}
 		break
-
 	}
 
 }

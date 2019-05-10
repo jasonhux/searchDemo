@@ -62,3 +62,16 @@ type TicketForDisplay struct {
 	AssigneeName     string `json:"assignee_name"`
 	OrganizationName string `json:"organization_name"`
 }
+
+type UserForDisplay struct {
+	User
+	OrganizationName   string   `json:"organization_name"`
+	SubmittedTicketIDs []string `json:"submitted_ticket_ids"`
+	AssignedTicketsIDs []string `json:"assigned_tickets_ids"`
+}
+
+type OrganizationForDisplay struct {
+	Organization
+	UserNames []string `json:"user_name"`
+	TicketIDs []string `json:"ticket_ids"`
+}

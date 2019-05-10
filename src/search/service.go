@@ -11,7 +11,7 @@ import (
 
 type Service interface {
 	SetStructMap() (err error)
-	Search() (isQuit bool, err error)
+	Search() (results string, isQuit bool, err error)
 	RequestNewSearch() bool
 }
 
@@ -27,7 +27,7 @@ func NewService(dataService data.Service, interactionService interaction.Service
 	return &service{DataService: dataService, InteractionService: interactionService}
 }
 
-func (s *service) Search() (isQuit bool, err error) {
+func (s *service) Search() (results string, isQuit bool, err error) {
 	fmt.Println("Welcome to Zendesk search. You can type 'quit' to leave the application")
 	fmt.Println("Select 1) Tickets or 2) Users or 3) Organizations")
 	isQuit, searchStructParam := s.InteractionService.GetUserInput()
@@ -50,22 +50,20 @@ func (s *service) Search() (isQuit bool, err error) {
 	if isQuit {
 		return
 	}
-	err = s.setSearchFieldValue(searchFieldParam)
+	typeName, err := s.setSearchFieldValue(searchFieldParam)
 	if err != nil {
 		return
 	}
 
-	fmt.Println("please enter search value")
+	fmt.Println("Please enter search value. The search value type is:", typeName)
+	if typeName == "[]string" {
+		fmt.Println("You just need to type in a string and any slices contain your search value is treated as matched slices")
+	}
 	isQuit, searchValueParam := s.InteractionService.GetUserInput()
 	if isQuit {
 		return
 	}
-	results, err := s.retrieveResults(searchValueParam)
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println(results)
-	}
+	results, err = s.retrieveResults(searchValueParam)
 	return
 }
 
@@ -100,15 +98,16 @@ func (s *service) setSearchStruct(param string) (fieldMap map[string]data.Field,
 	return
 }
 
-func (s *service) setSearchFieldValue(param string) error {
+func (s *service) setSearchFieldValue(param string) (fieldType string, err error) {
 	fieldMap, _ := s.StructMap[s.SelectedStructKey]
-	_, ok := fieldMap[param]
+	field, ok := fieldMap[param]
 	if !ok {
-		return errors.New("No field found")
+		err = errors.New("No field found")
+		return
 	}
 	s.SelectedFieldKey = param
 	//return type as well for notice
-	return nil
+	return field.Type, nil
 }
 
 func (s *service) retrieveResults(param string) (results string, err error) {
@@ -145,31 +144,25 @@ func processTicketResults(resultsList []interface{}, structMap map[string]map[st
 	for _, result := range resultsList {
 		ticket := result.(*data.Ticket)
 		//get assignee name
-		ulist, e := getLinkedStructs(strconv.Itoa(ticket.AssigneeID), userMap["ID"])
-		if e != nil {
-			// err = e
-			// return
-			continue
-		}
+		ulist := getLinkedStructs(strconv.Itoa(ticket.AssigneeID), userMap["ID"])
 		//relationship between ticket and assignee is 1:1; thus take the first user pointer
 		//add if length = 0 check???
-		assignee := ulist[0].(*data.User)
-
-		ulist, e = getLinkedStructs(strconv.Itoa(ticket.SubmitterID), userMap["ID"])
-		if e != nil {
-			// err = e
-			// return
-			continue
+		assignee := &data.User{}
+		if len(ulist) > 0 {
+			assignee = ulist[0].(*data.User)
 		}
-		submitter := ulist[0].(*data.User)
 
-		orgList, e := getLinkedStructs(strconv.Itoa(ticket.OrganizationID), organizationMap["ID"])
-		if e != nil {
-			// err = e
-			// return
-			continue
+		ulist = getLinkedStructs(strconv.Itoa(ticket.SubmitterID), userMap["ID"])
+		submitter := &data.User{}
+		if len(ulist) > 0 {
+			submitter = ulist[0].(*data.User)
 		}
-		org := orgList[0].(*data.Organization)
+
+		orgList := getLinkedStructs(strconv.Itoa(ticket.OrganizationID), organizationMap["ID"])
+		org := &data.Organization{}
+		if len(orgList) > 0 {
+			org = orgList[0].(*data.Organization)
+		}
 
 		ticketForDisplay := data.TicketForDisplay{Ticket: *ticket, AssigneeName: assignee.Name, SubmitterName: submitter.Name, OrganizationName: org.Name}
 		ticketsForDisplay = append(ticketsForDisplay, ticketForDisplay)
@@ -183,26 +176,76 @@ func processTicketResults(resultsList []interface{}, structMap map[string]map[st
 }
 
 func processUserResults(resultsList []interface{}, structMap map[string]map[string]data.Field) (processedResults string, err error) {
+	ticketMap, _ := structMap["1"]
+	organizationMap, _ := structMap["3"]
+	usersForDisplay := []data.UserForDisplay{}
 	for _, result := range resultsList {
+		assignedTicketIDs := []string{}
+		submittedTicketIDs := []string{}
 		user := result.(*data.User)
-		fmt.Printf("%+v\n", user)
+		//get organization name that user belongs to
+		orgList := getLinkedStructs(strconv.Itoa(user.OrganizationID), organizationMap["ID"])
+		org := &data.Organization{}
+		if len(orgList) > 0 {
+			org = orgList[0].(*data.Organization)
+		}
+		//get tickets that the user id is shown in the assignee field
+		ticketList := getLinkedStructs(strconv.Itoa(user.ID), ticketMap["AssigneeID"])
+
+		for _, t := range ticketList {
+			ticket := t.(*data.Ticket)
+			assignedTicketIDs = append(assignedTicketIDs, ticket.ID)
+		}
+
+		ticketList = getLinkedStructs(strconv.Itoa(user.ID), ticketMap["SubmitterID"])
+
+		for _, t := range ticketList {
+			ticket := t.(*data.Ticket)
+			submittedTicketIDs = append(submittedTicketIDs, ticket.ID)
+		}
+		userForDisplay := data.UserForDisplay{User: *user, OrganizationName: org.Name, SubmittedTicketIDs: submittedTicketIDs, AssignedTicketsIDs: assignedTicketIDs}
+		usersForDisplay = append(usersForDisplay, userForDisplay)
 	}
-	//to do
-	return "test", nil
+	if len(usersForDisplay) == 0 {
+		err = errors.New("No users are available in the search")
+		return
+	}
+	b, err := json.Marshal(usersForDisplay)
+	return string(b), err
 }
 
 func processOrganizationResults(resultsList []interface{}, structMap map[string]map[string]data.Field) (processedResults string, err error) {
+	ticketMap, _ := structMap["1"]
+	userMap, _ := structMap["2"]
+	orgsForDisplay := []data.OrganizationForDisplay{}
 	for _, result := range resultsList {
+		userNames := []string{}
+		ticketIDs := []string{}
 		organization := result.(*data.Organization)
-		fmt.Printf("%+v\n", organization)
+		ticketList := getLinkedStructs(strconv.Itoa(organization.ID), ticketMap["OrganizationID"])
+		for _, t := range ticketList {
+			ticket := t.(*data.Ticket)
+			ticketIDs = append(ticketIDs, ticket.ID)
+		}
+
+		userList := getLinkedStructs(strconv.Itoa(organization.ID), userMap["OrganizationID"])
+		for _, t := range userList {
+			user := t.(*data.User)
+			userNames = append(userNames, user.Name)
+		}
+		orgForDisplay := data.OrganizationForDisplay{Organization: *organization, TicketIDs: ticketIDs, UserNames: userNames}
+		orgsForDisplay = append(orgsForDisplay, orgForDisplay)
 	}
-	return "test", nil
+	if len(orgsForDisplay) == 0 {
+		err = errors.New("No organizations are available in the search")
+		return
+	}
+	b, err := json.Marshal(orgsForDisplay)
+	return string(b), err
 }
 
-func getLinkedStructs(value string, linkedField data.Field) (linkedStructs []interface{}, err error) {
-	linkedStructs, ok := linkedField.ValueMap[value]
-	if !ok || !(len(linkedStructs) > 0) {
-		err = errors.New("No linked struct was found")
-	}
+func getLinkedStructs(value string, linkedField data.Field) (linkedStructs []interface{}) {
+	//if there is no available key in the value map, return an empty linkedStructs back; this means the searched struct has no linked structs on the requested field
+	linkedStructs, _ = linkedField.ValueMap[value]
 	return
 }
