@@ -29,6 +29,8 @@ func NewService(dataService data.Service, interactionService interaction.Service
 	return &service{DataService: dataService, InteractionService: interactionService}
 }
 
+//Search func retrieves the user input and process the required search on the keywords given;
+//It returns results in string format if the search is successful; isQuit as true if user type 'quit' during the interaction; and error message if any error happens
 func (s *service) Search() (results string, isQuit bool, err error) {
 	fmt.Println("Welcome to Zendesk search. The search param is case insensitive. You can type 'quit' to leave the application")
 	fmt.Println("Select 1) Tickets or 2) Users or 3) Organizations")
@@ -67,6 +69,7 @@ func (s *service) Search() (results string, isQuit bool, err error) {
 	}
 	start := time.Now()
 	results, err = s.retrieveResults(searchValueParam)
+	//remember to remove the star time measurement
 	colapsed := time.Now().Sub(start)
 	results += fmt.Sprintf("%v", colapsed)
 	return

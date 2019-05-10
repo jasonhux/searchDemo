@@ -17,8 +17,8 @@ func main() {
 	err := s.SetStructMap()
 	if err != nil {
 		fmt.Println(err)
-		//stop here
-		s.RequestNewSearch()
+		fmt.Println("Failed to set the struct map, press any key to exit the application")
+		interactionService.GetUserInput()
 		return
 	}
 	for {

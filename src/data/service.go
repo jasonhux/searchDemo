@@ -27,39 +27,54 @@ func NewService() Service {
 	return &service{}
 }
 
-func (s *service) PrepareStructMap(tickets []*Ticket, users []*User, organizations []*Organization) (map[string]map[string]Field, error) {
+func (s *service) PrepareStructMap(tickets []*Ticket, users []*User, organizations []*Organization) (structMap map[string]map[string]Field, err error) {
 	//Convert tickets, users and organizations slice to []interface{} so they can share the same ProcessFieldList func which takes []interface{} as param
+	if len(tickets) == 0 {
+		err = errors.New("The given tickets data is empty")
+		return
+	}
 	tList := make([]interface{}, len(tickets))
 	for i, v := range tickets {
 		tList[i] = v
+	}
+
+	if len(users) == 0 {
+		err = errors.New("The given users data is empty")
+		return
 	}
 	uList := make([]interface{}, len(users))
 	for i, v := range users {
 		uList[i] = v
 	}
+
+	if len(organizations) == 0 {
+		err = errors.New("The given organizations data is empty")
+		return
+	}
 	oList := make([]interface{}, len(organizations))
 	for i, v := range organizations {
 		oList[i] = v
 	}
-	return map[string]map[string]Field{
+	structMap = map[string]map[string]Field{
 		"1": ProcessFieldMap(tList),
 		"2": ProcessFieldMap(uList),
 		"3": ProcessFieldMap(oList),
-	}, nil
-	//dont forget to add error handling
+	}
+	return
 }
 
-//ProcessFieldMap func is to convert object list such as tickets to a map structure;
-//map key is the struct field name (ex. Name). The map value is the Field struct;
-//Field struct contains the 1. map key's type (ex. string, int) and 2. a nested value map;
-//The nested value map has the struct field value in string format as the key (ex. "A Drama in Gabon", or "true");
+//ProcessFieldMap func is to convert a struct list such as tickets to a map structure;
+//map key is the struct field name with lower case (ex. name). The map value is a Field struct;
+//Field struct contains the 1. map key's type (ex. string, int), 2. the key's original case value, (ex. Name) and 3. a nested value map
+//The nested value map has the struct field value in string format, with lower case as the key (ex. "a drama in gabon", or "true");
 //the map value is a list of pointers to the structs which contains the map key;
-//When a field contains an array, treat each string in the array as a separate value map key;
+//When a field contains an string list, such as 'Tags', treat each string in the list as a separate value map key;
 func ProcessFieldMap(structList []interface{}) map[string]Field {
 	fieldMap := initFieldMap(structList[0])
 	for _, s := range structList {
 		v := reflect.ValueOf(s).Elem()
 		for k := range fieldMap {
+			//Since k is processed as lower case, we need to use fieldNameWithCase for reflect.value.FieldByName func to get the field value
 			fieldNameWithCase := fieldMap[k].NameWithCase
 			updatedPtrList := []interface{}{}
 			switch fieldMap[k].Type {
@@ -67,6 +82,8 @@ func ProcessFieldMap(structList []interface{}) map[string]Field {
 				list, ok := v.FieldByName(fieldNameWithCase).Interface().([]string)
 				if ok {
 					for _, element := range list {
+						//get the point list from ValueMap by the given key.
+						//If the key does not exist, it returns an empty slice; so here we don't need to have extra checks to see whether reading key is OK
 						matchedPtrList, _ := fieldMap[k].ValueMap[strings.ToLower(element)]
 						updatedPtrList = append(matchedPtrList, s)
 						fieldMap[k].ValueMap[element] = updatedPtrList
@@ -89,7 +106,8 @@ func initFieldMap(instance interface{}) map[string]Field {
 	fieldMap := map[string]Field{}
 	for i := 0; i < v.NumField(); i++ {
 		f := v.Field(i)
-		//to support case insensitive search
+		//To support case insensitive search, we use field name in lower case as the key of fieldMap.
+		//We also save the original case of the field name into the Field struct, this helps when we fill in the values to this initiated FieldMap later;
 		fieldNameWithCase := v.Type().Field(i).Name
 		n := strings.ToLower(fieldNameWithCase)
 		t := f.Type().String()
