@@ -1,4 +1,4 @@
-package search
+package data
 
 //Ticket struct for unmarshal ticket json object
 type Ticket struct {

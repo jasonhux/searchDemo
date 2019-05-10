@@ -2,21 +2,24 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
+	"searchDemo/src/data"
 	"searchDemo/src/search"
 	"time"
 )
 
 func main() {
 	start := time.Now()
-	tickets, users, organizations, _ := loadFile()
-	structMap := search.PrepareStructMap(tickets, users, organizations)
+
+	dataService := data.NewService()
+	s := search.NewService(dataService)
+	err := s.SetStructMap()
+	if err != nil {
+		fmt.Println(err)
+	}
 	colapse := time.Now().Sub(start)
 	fmt.Println("Load consumed:", colapse)
-	s := search.NewService(structMap)
 
 	scanner := bufio.NewScanner(os.Stdin)
 
@@ -60,17 +63,6 @@ func main() {
 	fmt.Println("Search and print time consumed:", colapse)
 	scanner.Scan()
 
-}
-
-func loadFile() (tickets []*search.Ticket, users []*search.User, organizations []*search.Organization, err error) {
-	data, _ := ioutil.ReadFile("tickets.json")
-	json.Unmarshal(data, &tickets)
-	data, _ = ioutil.ReadFile("users.json")
-	json.Unmarshal(data, &users)
-	data, _ = ioutil.ReadFile("organizations.json")
-	json.Unmarshal(data, &organizations)
-	//add error handling
-	return
 }
 
 func displayMenu() {
