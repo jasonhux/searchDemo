@@ -14,12 +14,12 @@ func main() {
 	interactionService := interaction.NewService(bufio.NewScanner(os.Stdin))
 
 	s := search.NewService(dataService, interactionService)
+	err := s.SetStructMap()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	for {
-		err := s.SetStructMap()
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
 		isQuit, err := s.Search()
 		if isQuit {
 			break
