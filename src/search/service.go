@@ -10,11 +10,8 @@ import (
 )
 
 type Service interface {
-	Search() (isQuit bool, err error)
 	SetStructMap() (err error)
-	SetSearchStruct(param string) (fieldMap map[string]data.Field, err error)
-	SetSearchFieldValue(param string) error
-	RetrieveResults(param string) (results string, err error)
+	Search() (isQuit bool, err error)
 	RequestNewSearch() bool
 }
 
@@ -37,7 +34,7 @@ func (s *service) Search() (isQuit bool, err error) {
 	if isQuit {
 		return
 	}
-	fieldMap, err := s.SetSearchStruct(searchStructParam)
+	fieldMap, err := s.setSearchStruct(searchStructParam)
 	if err != nil {
 		return
 	}
@@ -53,7 +50,7 @@ func (s *service) Search() (isQuit bool, err error) {
 	if isQuit {
 		return
 	}
-	err = s.SetSearchFieldValue(searchFieldParam)
+	err = s.setSearchFieldValue(searchFieldParam)
 	if err != nil {
 		return
 	}
@@ -63,7 +60,7 @@ func (s *service) Search() (isQuit bool, err error) {
 	if isQuit {
 		return
 	}
-	results, err := s.RetrieveResults(searchValueParam)
+	results, err := s.retrieveResults(searchValueParam)
 	if err != nil {
 		fmt.Println(err)
 	} else {
@@ -93,7 +90,7 @@ func (s *service) SetStructMap() (err error) {
 	return
 }
 
-func (s *service) SetSearchStruct(param string) (fieldMap map[string]data.Field, err error) {
+func (s *service) setSearchStruct(param string) (fieldMap map[string]data.Field, err error) {
 	fieldMap, ok := s.StructMap[param]
 	if !ok {
 		err = errors.New("No struct found")
@@ -103,7 +100,7 @@ func (s *service) SetSearchStruct(param string) (fieldMap map[string]data.Field,
 	return
 }
 
-func (s *service) SetSearchFieldValue(param string) error {
+func (s *service) setSearchFieldValue(param string) error {
 	fieldMap, _ := s.StructMap[s.SelectedStructKey]
 	_, ok := fieldMap[param]
 	if !ok {
@@ -114,7 +111,7 @@ func (s *service) SetSearchFieldValue(param string) error {
 	return nil
 }
 
-func (s *service) RetrieveResults(param string) (results string, err error) {
+func (s *service) retrieveResults(param string) (results string, err error) {
 	fieldMap, _ := s.StructMap[s.SelectedStructKey]
 	Field, _ := fieldMap[s.SelectedFieldKey]
 	resultsList, ok := Field.ValueMap[param]
