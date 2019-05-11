@@ -14,6 +14,7 @@ import (
 type Service interface {
 	SetStructMap() (err error)
 	Search() (results string, isQuit bool, err error)
+	DirectSearchWithValue() (results string, isQuit bool, err error)
 	RequestNewSearch() bool
 }
 
@@ -59,7 +60,7 @@ func (s *service) Search() (results string, isQuit bool, err error) {
 		return
 	}
 
-	fmt.Println("Please enter search value. The search value type is:", typeName)
+	fmt.Println("Please enter the search value. The search value type is:", typeName)
 	if typeName == "[]string" {
 		fmt.Println("You just need to type in a string and any slices contain your search value is treated as matched slices")
 	}
@@ -85,9 +86,54 @@ func (s *service) Search() (results string, isQuit bool, err error) {
 	return
 }
 
-// func (s *service) DirectSearchWithValue(value string) (results string, isQuit bool, err error) {
-// 	//  s.
-// }
+func (s *service) DirectSearchWithValue() (results string, isQuit bool, err error) {
+	// fmt.Println("Please enter the search value.")
+	// isQuit, value := s.InteractionService.GetUserInput()
+	// if isQuit {
+	// 	return
+	// }
+	value := "false"
+	keyMap := map[string]string{
+		"1": "tickets",
+		"2": "users",
+		"3": "organizations",
+	}
+
+	start := time.Now()
+	combinedResultsMap := map[string][]interface{}{}
+	for structKey := range s.StructMap {
+		resultMapKey := keyMap[structKey]
+		resultMap := map[string]bool{}
+
+		for fieldKey := range s.StructMap[structKey] {
+			resultList, err := retrieveResults(structKey, fieldKey, value, s.StructMap)
+			if err != nil {
+				continue
+			}
+			existingResultList, _ := combinedResultsMap[resultMapKey]
+			updatedResultList := existingResultList
+			for _, result := range resultList {
+				pointerKey := fmt.Sprintf("%v", &result)
+				isExist, _ := resultMap[pointerKey]
+				if !isExist {
+					resultMap[pointerKey] = true
+					updatedResultList = append(updatedResultList, result)
+
+				}
+
+			}
+			combinedResultsMap[resultMapKey] = updatedResultList
+		}
+	}
+	resultsMapBytes, err := json.Marshal(combinedResultsMap)
+	if err != nil {
+		return
+	}
+	results = string(resultsMapBytes)
+	colapsed := time.Now().Sub(start)
+	fmt.Println(colapsed)
+	return
+}
 
 func (s *service) RequestNewSearch() bool {
 	fmt.Println("Type 'n' or 'quit' to quit or any other key to start a new search")

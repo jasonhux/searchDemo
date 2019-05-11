@@ -22,7 +22,8 @@ func main() {
 		return
 	}
 	for {
-		results, isQuit, err := s.Search()
+		// results, isQuit, err := s.Search()
+		results, isQuit, err := s.DirectSearchWithValue()
 		if isQuit {
 			break
 		}
