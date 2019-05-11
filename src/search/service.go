@@ -8,13 +8,13 @@ import (
 	"searchDemo/src/interaction"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 type Service interface {
+	StartSearch() (results string, isQuit bool, err error)
 	SetStructMap() (err error)
-	Search() (results string, isQuit bool, err error)
-	DirectSearchWithValue() (results string, isQuit bool, err error)
 	RequestNewSearch() bool
 }
 
@@ -30,10 +30,27 @@ func NewService(dataService data.Service, interactionService interaction.Service
 	return &service{DataService: dataService, InteractionService: interactionService}
 }
 
+func (s *service) StartSearch() (results string, isQuit bool, err error) {
+	fmt.Println("Welcome to Zendesk search. The search param is case insensitive. You can type 'quit' to leave the application")
+	fmt.Println("Select 1) for direct value search, or 2) for field specific search")
+	isQuit, input := s.InteractionService.GetUserInput()
+	if isQuit {
+		return
+	}
+	switch input {
+	case "1":
+		return s.DirectSearchWithValue()
+	case "2":
+		return s.Search()
+	default:
+		err = errors.New("There is no available search type matched to your selection")
+	}
+	return
+}
+
 //Search func retrieves the user input and process the required search on the keywords given;
 //It returns results in string format if the search is successful; isQuit as true if user type 'quit' during the interaction; and error message if any error happens
 func (s *service) Search() (results string, isQuit bool, err error) {
-	fmt.Println("Welcome to Zendesk search. The search param is case insensitive. You can type 'quit' to leave the application")
 	fmt.Println("Select 1) Tickets or 2) Users or 3) Organizations")
 	isQuit, searchStructParam := s.InteractionService.GetUserInput()
 	if isQuit {
@@ -98,28 +115,35 @@ func (s *service) DirectSearchWithValue() (results string, isQuit bool, err erro
 		"3": "organizations",
 	}
 
-	start := time.Now()
 	combinedResultsMap := map[string][]interface{}{}
+	var wg sync.WaitGroup
 	for structKey := range s.StructMap {
-		resultMapKey := keyMap[structKey]
-		fieldKeys := []string{}
-		for fieldKey := range s.StructMap[structKey] {
-			fieldKeys = append(fieldKeys, fieldKey)
-		}
-		resultList, err := retrieveResults(structKey, value, fieldKeys, s.StructMap)
-		//consider to add empty check?
-		if err != nil {
-			continue
-		}
-		combinedResultsMap[resultMapKey] = resultList
+		wg.Add(1)
+		go func(structKey string) {
+			defer wg.Done()
+			resultMapKey := keyMap[structKey]
+			fieldKeys := []string{}
+			for fieldKey := range s.StructMap[structKey] {
+				fieldKeys = append(fieldKeys, fieldKey)
+			}
+			resultList, err := retrieveResults(structKey, value, fieldKeys, s.StructMap)
+			if err != nil {
+				//Omit the error in case other structs' retrieve results can return values; in real world, we should consider to log this error
+				return
+			}
+			combinedResultsMap[resultMapKey] = resultList
+		}(structKey)
+	}
+	wg.Wait()
+	if len(combinedResultsMap) == 0 {
+		err = errors.New("No results returned")
+		return
 	}
 	resultsMapBytes, err := json.Marshal(combinedResultsMap)
 	if err != nil {
 		return
 	}
 	results = string(resultsMapBytes)
-	colapsed := time.Now().Sub(start)
-	results += fmt.Sprintf("%v", colapsed)
 	return
 }
 

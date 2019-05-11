@@ -28,28 +28,20 @@ func NewService() Service {
 }
 
 func (s *service) PrepareStructMap(tickets []*Ticket, users []*User, organizations []*Organization) (structMap map[string]map[string]Field, err error) {
-	//Convert tickets, users and organizations slice to []interface{} so they can share the same ProcessFieldList func which takes []interface{} as param
-	if len(tickets) == 0 {
-		err = errors.New("The given tickets data is empty")
+	err = validateSource(tickets, users, organizations)
+	if err != nil {
 		return
 	}
+
+	//Convert tickets, users and organizations slice to []interface{} so they can share the same ProcessFieldList func which takes []interface{} as param
 	tList := make([]interface{}, len(tickets))
 	for i, v := range tickets {
 		tList[i] = v
 	}
 
-	if len(users) == 0 {
-		err = errors.New("The given users data is empty")
-		return
-	}
 	uList := make([]interface{}, len(users))
 	for i, v := range users {
 		uList[i] = v
-	}
-
-	if len(organizations) == 0 {
-		err = errors.New("The given organizations data is empty")
-		return
 	}
 	oList := make([]interface{}, len(organizations))
 	for i, v := range organizations {
@@ -59,6 +51,22 @@ func (s *service) PrepareStructMap(tickets []*Ticket, users []*User, organizatio
 		"1": ProcessFieldMap(tList),
 		"2": ProcessFieldMap(uList),
 		"3": ProcessFieldMap(oList),
+	}
+	return
+}
+
+func validateSource(tickets []*Ticket, users []*User, organizations []*Organization) (err error) {
+	if len(tickets) == 0 {
+		err = errors.New("The given tickets data is empty")
+		return
+	}
+	if len(users) == 0 {
+		err = errors.New("The given users data is empty")
+		return
+	}
+	if len(organizations) == 0 {
+		err = errors.New("The given organizations data is empty")
+		return
 	}
 	return
 }
