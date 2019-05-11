@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"reflect"
 	"strings"
+	"sync"
 )
 
 type Service interface {
@@ -125,34 +126,59 @@ func initFieldMap(instance interface{}) map[string]Field {
 }
 
 func (s *service) LoadFile() (tickets []*Ticket, users []*User, organizations []*Organization, err error) {
-	data, e := ioutil.ReadFile("./data/tickets.json")
-	if e != nil {
-		err = errors.New("read tickets.json file failed")
+	var wg sync.WaitGroup
+	errsChan := make(chan error, 3)
+	wg.Add(3)
+	go func() {
+		defer wg.Done()
+		data, e := ioutil.ReadFile("./data/tickets.json")
+		if e != nil {
+			err = errors.New("read tickets.json file failed")
+			errsChan <- err
+			return
+		}
+		e = json.Unmarshal(data, &tickets)
+		if e != nil {
+			err = errors.New("unmarshal tickets failed")
+			errsChan <- err
+			return
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		data, e := ioutil.ReadFile("./data/users.json")
+		if e != nil {
+			err = errors.New("read users.json file failed")
+			errsChan <- err
+			return
+		}
+		e = json.Unmarshal(data, &users)
+		if e != nil {
+			err = errors.New("unmarshal users failed")
+			errsChan <- err
+			return
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		data, e := ioutil.ReadFile("./data/organizations.json")
+		if e != nil {
+			err = errors.New("read organizations.json file failed")
+			errsChan <- err
+			return
+		}
+		e = json.Unmarshal(data, &organizations)
+		if e != nil {
+			err = errors.New("unmarshal organizations failed")
+			errsChan <- err
+		}
 		return
-	}
-	e = json.Unmarshal(data, &tickets)
-	if e != nil {
-		err = errors.New("unmarshal tickets failed")
-		return
-	}
-	data, e = ioutil.ReadFile("./data/users.json")
-	if e != nil {
-		err = errors.New("read users.json file failed")
-		return
-	}
-	e = json.Unmarshal(data, &users)
-	if e != nil {
-		err = errors.New("unmarshal users failed")
-		return
-	}
-	data, e = ioutil.ReadFile("./data/organizations.json")
-	if e != nil {
-		err = errors.New("read organizations.json file failed")
-		return
-	}
-	e = json.Unmarshal(data, &organizations)
-	if e != nil {
-		err = errors.New("unmarshal organizations failed")
+	}()
+	wg.Wait()
+	close(errsChan)
+	for e := range errsChan {
+		err = e
+		break
 	}
 	return
 }
