@@ -69,7 +69,7 @@ func (s *service) Search() (results string, isQuit bool, err error) {
 		return
 	}
 	start := time.Now()
-	resultList, err := retrieveResults(s.SelectedStructKey, s.SelectedFieldKey, searchValueParam, s.StructMap)
+	resultList, err := retrieveResults(s.SelectedStructKey, searchValueParam, []string{s.SelectedFieldKey}, s.StructMap)
 	if err != nil {
 		return
 	}
@@ -87,12 +87,11 @@ func (s *service) Search() (results string, isQuit bool, err error) {
 }
 
 func (s *service) DirectSearchWithValue() (results string, isQuit bool, err error) {
-	// fmt.Println("Please enter the search value.")
-	// isQuit, value := s.InteractionService.GetUserInput()
-	// if isQuit {
-	// 	return
-	// }
-	value := "false"
+	fmt.Println("Please enter the search value.")
+	isQuit, value := s.InteractionService.GetUserInput()
+	if isQuit {
+		return
+	}
 	keyMap := map[string]string{
 		"1": "tickets",
 		"2": "users",
@@ -103,27 +102,16 @@ func (s *service) DirectSearchWithValue() (results string, isQuit bool, err erro
 	combinedResultsMap := map[string][]interface{}{}
 	for structKey := range s.StructMap {
 		resultMapKey := keyMap[structKey]
-		resultMap := map[string]bool{}
-
+		fieldKeys := []string{}
 		for fieldKey := range s.StructMap[structKey] {
-			resultList, err := retrieveResults(structKey, fieldKey, value, s.StructMap)
-			if err != nil {
-				continue
-			}
-			existingResultList, _ := combinedResultsMap[resultMapKey]
-			updatedResultList := existingResultList
-			for _, result := range resultList {
-				pointerKey := fmt.Sprintf("%v", &result)
-				isExist, _ := resultMap[pointerKey]
-				if !isExist {
-					resultMap[pointerKey] = true
-					updatedResultList = append(updatedResultList, result)
-
-				}
-
-			}
-			combinedResultsMap[resultMapKey] = updatedResultList
+			fieldKeys = append(fieldKeys, fieldKey)
 		}
+		resultList, err := retrieveResults(structKey, value, fieldKeys, s.StructMap)
+		//consider to add empty check?
+		if err != nil {
+			continue
+		}
+		combinedResultsMap[resultMapKey] = resultList
 	}
 	resultsMapBytes, err := json.Marshal(combinedResultsMap)
 	if err != nil {
@@ -181,16 +169,31 @@ func (s *service) setSearchFieldValue(param string) (fieldType string, err error
 	return field.Type, nil
 }
 
-func retrieveResults(structKey, FieldKey, param string, structMap map[string]map[string]data.Field) (results []interface{}, err error) {
+func retrieveResults(structKey, param string, fieldKeys []string, structMap map[string]map[string]data.Field) (results []interface{}, err error) {
 	paramLowerCase := strings.ToLower(param)
 	fieldMap, _ := structMap[structKey]
-	Field, _ := fieldMap[FieldKey]
-	resultsList, ok := Field.ValueMap[paramLowerCase]
-	if !ok {
+	accumulatedResultsList := []interface{}{}
+	resultsMap := map[interface{}]bool{}
+	for _, fieldKey := range fieldKeys {
+		field, _ := fieldMap[fieldKey]
+		resultsList, ok := field.ValueMap[paramLowerCase]
+		if !ok {
+			continue
+		}
+		for _, result := range resultsList {
+			isExist, _ := resultsMap[result]
+			if !isExist {
+				resultsMap[result] = true
+				accumulatedResultsList = append(accumulatedResultsList, result)
+			}
+		}
+	}
+
+	if len(accumulatedResultsList) == 0 {
 		err = errors.New("No results found")
 		return
 	}
-	return processResults(resultsList, structMap)
+	return processResults(accumulatedResultsList, structMap)
 }
 
 func processResults(resultsList []interface{}, structMap map[string]map[string]data.Field) (processedResults []interface{}, err error) {
