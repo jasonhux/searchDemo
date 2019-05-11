@@ -119,7 +119,7 @@ func (s *service) DirectSearchWithValue() (results string, isQuit bool, err erro
 	}
 	results = string(resultsMapBytes)
 	colapsed := time.Now().Sub(start)
-	fmt.Println(colapsed)
+	results += fmt.Sprintf("%v", colapsed)
 	return
 }
 
@@ -169,10 +169,13 @@ func (s *service) setSearchFieldValue(param string) (fieldType string, err error
 	return field.Type, nil
 }
 
+//Accepts multiple field keys query; it makes sure the returned results are not duplicated
 func retrieveResults(structKey, param string, fieldKeys []string, structMap map[string]map[string]data.Field) (results []interface{}, err error) {
 	paramLowerCase := strings.ToLower(param)
 	fieldMap, _ := structMap[structKey]
 	accumulatedResultsList := []interface{}{}
+	//This map's key expects to be the pointer of a struct. By checking whether the struct pointer exists, it avoids the duplicated pointers stored into the results list.
+	//Thus accumulatedResultsList only gets the results which does not exist in the map appended.
 	resultsMap := map[interface{}]bool{}
 	for _, fieldKey := range fieldKeys {
 		field, _ := fieldMap[fieldKey]
