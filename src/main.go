@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	dataService := data.NewService()
+	dataService := data.NewService(data.NewSerializer())
 	interactionService := interaction.NewService(bufio.NewScanner(os.Stdin))
 
 	s := search.NewService(dataService, interactionService)

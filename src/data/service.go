@@ -1,10 +1,8 @@
 package data
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"reflect"
 	"strings"
 	"sync"
@@ -16,6 +14,7 @@ type Service interface {
 }
 
 type service struct {
+	Serializer Serializer
 }
 
 type Field struct {
@@ -24,8 +23,8 @@ type Field struct {
 	ValueMap     map[string][]interface{}
 }
 
-func NewService() Service {
-	return &service{}
+func NewService(serializer Serializer) Service {
+	return &service{Serializer: serializer}
 }
 
 func (s *service) PrepareStructMap(tickets []*Ticket, users []*User, organizations []*Organization) (structMap map[string]map[string]Field, err error) {
@@ -131,13 +130,13 @@ func (s *service) LoadFile() (tickets []*Ticket, users []*User, organizations []
 	wg.Add(3)
 	go func() {
 		defer wg.Done()
-		data, e := ioutil.ReadFile("./data/tickets.json")
+		data, e := s.Serializer.ReadFile("./data/tickets.json")
 		if e != nil {
 			err = errors.New("read tickets.json file failed")
 			errsChan <- err
 			return
 		}
-		e = json.Unmarshal(data, &tickets)
+		e = s.Serializer.Unmarshal(data, &tickets)
 		if e != nil {
 			err = errors.New("unmarshal tickets failed")
 			errsChan <- err
@@ -146,13 +145,13 @@ func (s *service) LoadFile() (tickets []*Ticket, users []*User, organizations []
 	}()
 	go func() {
 		defer wg.Done()
-		data, e := ioutil.ReadFile("./data/users.json")
+		data, e := s.Serializer.ReadFile("./data/users.json")
 		if e != nil {
 			err = errors.New("read users.json file failed")
 			errsChan <- err
 			return
 		}
-		e = json.Unmarshal(data, &users)
+		e = s.Serializer.Unmarshal(data, &users)
 		if e != nil {
 			err = errors.New("unmarshal users failed")
 			errsChan <- err
@@ -161,13 +160,13 @@ func (s *service) LoadFile() (tickets []*Ticket, users []*User, organizations []
 	}()
 	go func() {
 		defer wg.Done()
-		data, e := ioutil.ReadFile("./data/organizations.json")
+		data, e := s.Serializer.ReadFile("./data/organizations.json")
 		if e != nil {
 			err = errors.New("read organizations.json file failed")
 			errsChan <- err
 			return
 		}
-		e = json.Unmarshal(data, &organizations)
+		e = s.Serializer.Unmarshal(data, &organizations)
 		if e != nil {
 			err = errors.New("unmarshal organizations failed")
 			errsChan <- err
