@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 type Service interface {
@@ -140,7 +139,6 @@ func (s *service) RequestNewSearch() bool {
 }
 
 func (s *service) SetStructMap() (err error) {
-	start := time.Now()
 	tickets, users, organizations, err := s.DataService.LoadFile()
 	if err != nil {
 		return
@@ -149,8 +147,6 @@ func (s *service) SetStructMap() (err error) {
 	if err == nil {
 		s.StructMap = structMap
 	}
-	colapsed := time.Now().Sub(start)
-	fmt.Println(colapsed)
 	return
 }
 
