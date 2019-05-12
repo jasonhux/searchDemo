@@ -36,7 +36,7 @@ to launch the application.
     ```
     go test ./...
     ```
-NOTE: Due to time limitation, in startSearch_test I use JSON.Marshal on results and check whether expected and actual results are same. By doing this, the test may break, as during marshal it may treat the list in random sequence. In order to safe guard the results compare, consider to convert interface to actual type then do a loop on each list and run deep equal compare. Alternatively, the println in latest golang project should also gentlely support key/field sorting. But I dont use it here since it's version dependent.
+NOTE: Due to time limitation, in startSearch_test I use JSON.Marshal on results and check whether expected and actual results are same. By doing this, the test may break, as during marshal it may treat the list in random sequence. In order to safe guard the results compare, consider to convert interface to actual type then do a loop on each list and run deep equal compare. Alternatively, the println in latest golang project should also gentlely support key/field sorting. But I don't use it here since it's version dependent.
 
 ## Limitations
 * The application now does the exact match search. i.e. Search 'Miss T' will not match 'Miss Test'
