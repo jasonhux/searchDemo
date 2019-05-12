@@ -30,5 +30,14 @@ to launch the application.
     ```
     ./app
     ```
+## Run tests
+* Browse to the ```~/searchDemo/src``` directory
+* Run command
+    ```
+    go test ./...
+    ```
+NOTE: The startSearch_test does JSON.Marshal on results and check whether expected and actual results are same. By doing this, the test may break as during marshal it may treat the list in random sequence. In order to safe guard the results compare, may consider to convert interface to actual type then do a loop on each list and run deep equal compare.  
+
 ## Limitations
-The application now does the exact match search. i.e. Search 'Miss T' will not match 'Miss Test'
+* The application now does the exact match search. i.e. Search 'Miss T' will not match 'Miss Test'
+

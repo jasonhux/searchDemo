@@ -230,23 +230,9 @@ func processTicketResults(resultsList []interface{}, structMap map[string]map[st
 	for _, result := range resultsList {
 		ticket := result.(*data.Ticket)
 
-		//Find linked struct to the ticket, such as assignee, submitter and organization.
+		assignee := getLinkedUser(strconv.Itoa(ticket.AssigneeID), userMap["id"])
 
-		ulist := getLinkedStructs(strconv.Itoa(ticket.AssigneeID), userMap["id"])
-		//Relationship between ticket and assignee is 1:1; thus take the first user pointer
-		//If ulist is empty, assignee is a empty struct
-		assignee := &data.User{}
-		if len(ulist) > 0 {
-			assignee = ulist[0].(*data.User)
-		}
-
-		getLinkedUser(strconv.Itoa(ticket.AssigneeID), userMap["id"])
-
-		ulist = getLinkedStructs(strconv.Itoa(ticket.SubmitterID), userMap["id"])
-		submitter := &data.User{}
-		if len(ulist) > 0 {
-			submitter = ulist[0].(*data.User)
-		}
+		submitter := getLinkedUser(strconv.Itoa(ticket.SubmitterID), userMap["id"])
 
 		orgList := getLinkedStructs(strconv.Itoa(ticket.OrganizationID), organizationMap["id"])
 		org := &data.Organization{}
@@ -264,16 +250,6 @@ func processTicketResults(resultsList []interface{}, structMap map[string]map[st
 	}
 	for _, ticket := range ticketsForDisplay {
 		processedResults = append(processedResults, ticket)
-	}
-	return
-}
-
-func getLinkedUser(value string, userField data.Field) (user *data.User) {
-	ulist := getLinkedStructs(value, userField)
-	if len(ulist) > 0 {
-		user = ulist[0].(*data.User)
-	} else {
-		user = &data.User{}
 	}
 	return
 }
@@ -358,5 +334,15 @@ func processOrganizationResults(resultsList []interface{}, structMap map[string]
 func getLinkedStructs(value string, linkedField data.Field) (linkedStructs []interface{}) {
 	//If there is no available key in the value map, return an empty linkedStructs back; this means the searched struct has no linked structs on the requested field
 	linkedStructs, _ = linkedField.ValueMap[value]
+	return
+}
+
+func getLinkedUser(value string, userField data.Field) (user *data.User) {
+	ulist := getLinkedStructs(value, userField)
+	if len(ulist) > 0 {
+		user = ulist[0].(*data.User)
+	} else {
+		user = &data.User{}
+	}
 	return
 }
