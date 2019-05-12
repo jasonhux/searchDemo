@@ -13,7 +13,9 @@ searchDemo is a golang console application to search against the tickets, users 
 ## Run the application locally
 ### Run the binary file directly for Mac OS
 For Mac users: The binary file "app" is included in the repo. You just need to clone this repo and browse to the '~/searchDemo/src' directory, then run command: 
+    ```
     ./app
+    ```
 to launch the application.
 
 ### Build the go application and execute the built file
@@ -21,9 +23,12 @@ to launch the application.
 * Place the cloned project under Golang's 'GOPATH' directory. 
 * Browse to the '~/searchDemo/src' directory
 * Build the Golang application: 
+    ```
     go build -o app
+    ```
 * Run command
+    ```
     ./app
-
+    ```
 ## Limitations
 The application now does the exact match search. i.e. Search 'Miss T' will not match 'Miss Test'
