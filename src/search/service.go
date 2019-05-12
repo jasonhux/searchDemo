@@ -48,7 +48,7 @@ func (s *service) StartSearch() (results interface{}, isQuit bool, err error) {
 }
 
 //Search func retrieves the user input and process the required search on the keywords given;
-//It returns results in string format if the search is successful; isQuit as true if user type 'quit' during the interaction; and error message if any error happens
+//It returns results in string format if the search is successful; isQuit as true if user types 'quit' during the interaction; and error message if any error happens
 func (s *service) Search() (results interface{}, isQuit bool, err error) {
 	fmt.Println("Select 1) Tickets or 2) Users or 3) Organizations")
 	isQuit, searchStructParam := s.InteractionService.GetUserInput()
@@ -116,7 +116,7 @@ func (s *service) DirectSearchWithValue() (results interface{}, isQuit bool, err
 			}
 			resultList, err := retrieveResults(structKey, value, fieldKeys, s.StructMap)
 			if err != nil {
-				//Omit the error in case other structs' retrieve results can return values; in real world, we should consider to log this error
+				//Omit the error in case other structs' retrieve results can return values;
 				return
 			}
 			combinedResultsMap[resultMapKey] = resultList
@@ -240,6 +240,8 @@ func processTicketResults(resultsList []interface{}, structMap map[string]map[st
 			assignee = ulist[0].(*data.User)
 		}
 
+		getLinkedUser(strconv.Itoa(ticket.AssigneeID), userMap["id"])
+
 		ulist = getLinkedStructs(strconv.Itoa(ticket.SubmitterID), userMap["id"])
 		submitter := &data.User{}
 		if len(ulist) > 0 {
@@ -262,6 +264,16 @@ func processTicketResults(resultsList []interface{}, structMap map[string]map[st
 	}
 	for _, ticket := range ticketsForDisplay {
 		processedResults = append(processedResults, ticket)
+	}
+	return
+}
+
+func getLinkedUser(value string, userField data.Field) (user *data.User) {
+	ulist := getLinkedStructs(value, userField)
+	if len(ulist) > 0 {
+		user = ulist[0].(*data.User)
+	} else {
+		user = &data.User{}
 	}
 	return
 }

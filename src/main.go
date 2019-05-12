@@ -14,7 +14,6 @@ func main() {
 	dataService := data.NewService(data.NewSerializer())
 	interactionService := interaction.NewService(bufio.NewScanner(os.Stdin))
 	s := search.NewService(dataService, interactionService)
-
 	//Load the struct map into search service before user gets prompts for searches. If load fails, inform user and exit the application
 	err := s.SetStructMap()
 	if err != nil {
