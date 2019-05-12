@@ -3,8 +3,8 @@ searchDemo is a golang console application to search against the tickets, users 
 
 ## Features
 * It provides two search options: 
- 1. Direct value search: require an input of search value, then application will search the value in all fields from the resources and return all matched results. For example, when search for "1", the user with id "1" and tickets with either assignee or submitter id "1" will be matched. 
- 2. Field specific search: require inputs of 1) struct type(ie. 1 for tickets), 2) field name, 3) search value, then application will search the value in the specified field and return matched results.
+  ** Direct value search: require an input of search value, then application will search the value in all fields from the resources and return all matched results. For example, when search for "1", the user with id "1" and tickets with either assignee or submitter id "1" will be matched. 
+  ** Field specific search: require inputs of 1) struct type(ie. 1 for tickets), 2) field name, 3) search value, then application will search the value in the specified field and return matched results.
 
 * The search supports case-insensitive inputs
 
@@ -19,7 +19,7 @@ For Mac users: The binary file "app" is included in the repo. You just need to c
 to launch the application.
 
 ### Build the go application and execute the built file
-* Follow the insructions in [Golang Guide](https://golang.org/doc/install) and install golang into your workstation.
+* Follow the insructions in [Golang Guide](https://golang.org/doc/install) and install Go into your workstation.
 * Place the cloned project under Golang's "$GOPATH" directory. 
 * Browse to the ```~/searchDemo/src``` directory
 * Build the Golang application: 
