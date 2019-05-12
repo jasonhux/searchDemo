@@ -94,7 +94,7 @@ func ProcessFieldMap(structList []interface{}) map[string]Field {
 						//If the key does not exist, it returns an empty slice; so here we don't need to have extra checks to see whether reading key is OK
 						matchedPtrList, _ := fieldMap[k].ValueMap[strings.ToLower(element)]
 						updatedPtrList = append(matchedPtrList, s)
-						fieldMap[k].ValueMap[element] = updatedPtrList
+						fieldMap[k].ValueMap[strings.ToLower(element)] = updatedPtrList
 					}
 				}
 				break
@@ -126,53 +126,36 @@ func initFieldMap(instance interface{}) map[string]Field {
 
 func (s *service) LoadFile() (tickets []*Ticket, users []*User, organizations []*Organization, err error) {
 	var wg sync.WaitGroup
-	errsChan := make(chan error, 3)
-	wg.Add(3)
-	go func() {
-		defer wg.Done()
-		data, e := s.Serializer.ReadFile("./data/tickets.json")
-		if e != nil {
-			err = errors.New("read tickets.json file failed")
-			errsChan <- err
-			return
-		}
-		e = s.Serializer.Unmarshal(data, &tickets)
-		if e != nil {
-			err = errors.New("unmarshal tickets failed")
-			errsChan <- err
-			return
-		}
-	}()
-	go func() {
-		defer wg.Done()
-		data, e := s.Serializer.ReadFile("./data/users.json")
-		if e != nil {
-			err = errors.New("read users.json file failed")
-			errsChan <- err
-			return
-		}
-		e = s.Serializer.Unmarshal(data, &users)
-		if e != nil {
-			err = errors.New("unmarshal users failed")
-			errsChan <- err
-			return
-		}
-	}()
-	go func() {
-		defer wg.Done()
-		data, e := s.Serializer.ReadFile("./data/organizations.json")
-		if e != nil {
-			err = errors.New("read organizations.json file failed")
-			errsChan <- err
-			return
-		}
-		e = s.Serializer.Unmarshal(data, &organizations)
-		if e != nil {
-			err = errors.New("unmarshal organizations failed")
-			errsChan <- err
-		}
-		return
-	}()
+	loadStructs := []struct {
+		label  string
+		target interface{}
+	}{
+		{label: "tickets", target: &tickets},
+		{label: "users", target: &users},
+		{label: "organizations", target: &organizations},
+	}
+	errsChan := make(chan error, len(loadStructs))
+	wg.Add(len(loadStructs))
+	for _, loadStruct := range loadStructs {
+		go func(loadStruct struct {
+			label  string
+			target interface{}
+		}) {
+			defer wg.Done()
+			data, e := s.Serializer.ReadFile(fmt.Sprintf("./data/%s.json", loadStruct.label))
+			if e != nil {
+				err = fmt.Errorf("read %s.json file failed", loadStruct.label)
+				errsChan <- err
+				return
+			}
+			e = s.Serializer.Unmarshal(data, loadStruct.target)
+			if e != nil {
+				err = fmt.Errorf("unmarshal %s failed", loadStruct.label)
+				errsChan <- err
+				return
+			}
+		}(loadStruct)
+	}
 	wg.Wait()
 	close(errsChan)
 	for e := range errsChan {
