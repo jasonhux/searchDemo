@@ -1,7 +1,6 @@
 package search
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"searchDemo/src/data"
@@ -13,7 +12,7 @@ import (
 )
 
 type Service interface {
-	StartSearch() (results string, isQuit bool, err error)
+	StartSearch() (results interface{}, isQuit bool, err error)
 	SetStructMap() (err error)
 	RequestNewSearch() bool
 }
@@ -30,7 +29,7 @@ func NewService(dataService data.Service, interactionService interaction.Service
 	return &service{DataService: dataService, InteractionService: interactionService}
 }
 
-func (s *service) StartSearch() (results string, isQuit bool, err error) {
+func (s *service) StartSearch() (results interface{}, isQuit bool, err error) {
 	fmt.Println("Welcome to Zendesk search. The search param is case insensitive. You can type 'quit' to leave the application")
 	fmt.Println("Select 1) for direct value search, or 2) for field specific search")
 	isQuit, input := s.InteractionService.GetUserInput()
@@ -50,7 +49,7 @@ func (s *service) StartSearch() (results string, isQuit bool, err error) {
 
 //Search func retrieves the user input and process the required search on the keywords given;
 //It returns results in string format if the search is successful; isQuit as true if user type 'quit' during the interaction; and error message if any error happens
-func (s *service) Search() (results string, isQuit bool, err error) {
+func (s *service) Search() (results interface{}, isQuit bool, err error) {
 	fmt.Println("Select 1) Tickets or 2) Users or 3) Organizations")
 	isQuit, searchStructParam := s.InteractionService.GetUserInput()
 	if isQuit {
@@ -85,25 +84,14 @@ func (s *service) Search() (results string, isQuit bool, err error) {
 	if isQuit {
 		return
 	}
-	start := time.Now()
 	resultList, err := retrieveResults(s.SelectedStructKey, searchValueParam, []string{s.SelectedFieldKey}, s.StructMap)
 	if err != nil {
 		return
 	}
-
-	//Convert to json string for output
-	resultsBytes, err := json.Marshal(resultList)
-	if err != nil {
-		return
-	}
-	results = string(resultsBytes)
-	//remove later
-	colapsed := time.Now().Sub(start)
-	results += fmt.Sprintf("%v", colapsed)
-	return
+	return resultList, false, nil
 }
 
-func (s *service) DirectSearchWithValue() (results string, isQuit bool, err error) {
+func (s *service) DirectSearchWithValue() (results interface{}, isQuit bool, err error) {
 	fmt.Println("Please enter the search value.")
 	isQuit, value := s.InteractionService.GetUserInput()
 	if isQuit {
@@ -139,12 +127,7 @@ func (s *service) DirectSearchWithValue() (results string, isQuit bool, err erro
 		err = errors.New("No results returned")
 		return
 	}
-	resultsMapBytes, err := json.Marshal(combinedResultsMap)
-	if err != nil {
-		return
-	}
-	results = string(resultsMapBytes)
-	return
+	return combinedResultsMap, false, nil
 }
 
 func (s *service) RequestNewSearch() bool {

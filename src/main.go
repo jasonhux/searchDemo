@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"searchDemo/src/data"
@@ -29,7 +30,7 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		} else {
-			fmt.Println(results)
+			printOutput(results)
 		}
 
 		isNewSearchRequired := s.RequestNewSearch()
@@ -38,5 +39,13 @@ func main() {
 		}
 		break
 	}
+}
 
+func printOutput(v interface{}) {
+	resultsBytes, err := json.Marshal(v)
+	if err != nil {
+		fmt.Println(err)
+	}
+	resultsJSONString := string(resultsBytes)
+	fmt.Println(resultsJSONString)
 }
