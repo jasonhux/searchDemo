@@ -13,8 +13,9 @@ import (
 func main() {
 	dataService := data.NewService(data.NewSerializer())
 	interactionService := interaction.NewService(bufio.NewScanner(os.Stdin))
-
 	s := search.NewService(dataService, interactionService)
+
+	//Load the struct map into search service before user gets prompts for searches. If load fails, inform user and exit the application
 	err := s.SetStructMap()
 	if err != nil {
 		fmt.Println(err)
@@ -22,6 +23,8 @@ func main() {
 		interactionService.GetUserInput()
 		return
 	}
+
+	//Loop the StartSearch func so the application will continue to run (either successful or failed search) unless user select to quit
 	for {
 		results, isQuit, err := s.StartSearch()
 		if isQuit {

@@ -14,14 +14,22 @@ func TestSetStructMap(t *testing.T) {
 		expectedIsPrepareStructMapCalled bool
 		expectedHasError                 bool
 		expectedErrorMessage             string
-		isStructMapSaved                 bool
 	}{
 		"Fail to load file": {
 			isLoadFileReturnError:            true,
 			expectedIsPrepareStructMapCalled: false,
 			expectedHasError:                 true,
 			expectedErrorMessage:             "error load file",
-			isStructMapSaved:                 false,
+		},
+		"Fail to prepare the struct map": {
+			expectedIsPrepareStructMapCalled: true,
+			isPrepareStructMapReturnError:    true,
+			expectedHasError:                 true,
+			expectedErrorMessage:             "error prepare the struct map",
+		},
+		"Successfully load the struct map": {
+			expectedIsPrepareStructMapCalled: true,
+			expectedHasError:                 false,
 		},
 	}
 	for tc, tp := range testCases {
@@ -36,7 +44,12 @@ func TestSetStructMap(t *testing.T) {
 				t.Errorf("For test case <%s>, Expected error message is <%s>, but Actual message is <%s>", tc, tp.expectedErrorMessage, err.Error())
 			}
 			if mockDataService.IsPrepareStructMapCalled != tp.expectedIsPrepareStructMapCalled {
-				t.Errorf("For test case <%s>, Expected dataServie PrepareStructMap func called is <%v>, but Actual actually is <%v>", tc, tp.expectedIsPrepareStructMapCalled, !tp.expectedIsPrepareStructMapCalled)
+				t.Errorf("For test case <%s>, Expected dataServie PrepareStructMap func called is <%v>, but Actually is <%v>", tc, tp.expectedIsPrepareStructMapCalled, !tp.expectedIsPrepareStructMapCalled)
+			}
+		} else {
+			savedStructMap := s.GetStructMap()
+			if len(savedStructMap) == 0 {
+				t.Errorf("For test case <%s>, Expected struct map is saved, but Actually not", tc)
 			}
 		}
 	}

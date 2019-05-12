@@ -14,6 +14,7 @@ type Service interface {
 	StartSearch() (results interface{}, isQuit bool, err error)
 	SetStructMap() (err error)
 	RequestNewSearch() bool
+	GetStructMap() map[string]map[string]data.Field
 }
 
 type service struct {
@@ -148,6 +149,10 @@ func (s *service) SetStructMap() (err error) {
 		s.StructMap = structMap
 	}
 	return
+}
+
+func (s *service) GetStructMap() map[string]map[string]data.Field {
+	return s.StructMap
 }
 
 func (s *service) setSearchStruct(param string) (fieldMap map[string]data.Field, err error) {
